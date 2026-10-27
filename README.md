@@ -1,15 +1,16 @@
 # ReachInbox Full-Stack Email Job Scheduler
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ESM%20Node%2020-yellow.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-18.3%20JSX-61dafb.svg)](https://react.dev/)
 [![Express](https://img.shields.io/badge/Express-4.21-lightgrey.svg)](https://expressjs.com/)
 [![BullMQ](https://img.shields.io/badge/Queue-BullMQ%205-orange.svg)](https://docs.bullmq.io/)
 [![Redis](https://img.shields.io/badge/Redis-7.0-red.svg)](https://redis.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![Elasticsearch](https://img.shields.io/badge/Search-Elasticsearch%208-green.svg)](https://www.elastic.co/)
-[![React](https://img.shields.io/badge/React-18.3-61dafb.svg)](https://react.dev/)
+[![Vitest](https://img.shields.io/badge/Tests-Vitest%20Passed-brightgreen.svg)](https://vitest.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8.svg)](https://tailwindcss.com/)
 
-A production-grade, distributed cold outreach email job scheduler service and dashboard built for **ReachInbox.ai (Outbox Labs)**.
+A production-grade, distributed cold outreach email job scheduler service and dashboard built with pure JavaScript (ESM) and React for **ReachInbox.ai (Outbox Labs)**.
 
 ---
 
@@ -129,10 +130,25 @@ Cron jobs operate on static clock ticks and lose state across process restarts. 
   - When the server boots back up, BullMQ resumes the exact delayed timers.
   - Emails scheduled for the future still send at their exact target time!
 
-### Idempotency Enforcement
+### Idempotency & Crash-Window Enforcement
 1. **BullMQ Job ID**: Every job is assigned `jobId: emailJob.id`. BullMQ rejects any duplicate job with the same ID.
 2. **Database Unique Key**: Each `EmailJob` has a unique `idempotencyKey: email_<sender>_<recipient>_<time>_<uuid>`.
-3. **Worker Status Verification**: Before sending, the worker queries PostgreSQL: if `status === 'SENT'`, the job is skipped immediately.
+3. **Deterministic RFC 5322 Message-ID**: Outbound emails set a deterministic header `<${idempotencyKey}@reachinbox.ai>` to prevent duplicate deliveries across SMTP relays.
+4. **Crash-Window Proof Cache (`sent_proof:<id>`)**: If a worker crashes *after* the email provider accepts the message but *before* the DB update commits, the Redis sent proof confirms acceptance upon restart and reconciles PostgreSQL without re-sending.
+
+---
+
+## 🏆 5 Pre-Interview Reliability Implementations
+
+For an in-depth distributed systems breakdown, see [**`docs/INTERVIEW_DEFENSE.md`**](docs/INTERVIEW_DEFENSE.md).
+
+| Requirement | Implemented Solution | Automated Verification Command |
+|---|---|---|
+| **1. Prove Duplicate Prevention** | Crash-window sent proof cache in Redis + deterministic RFC 5322 Message-ID headers | `npm run test:duplicates` |
+| **2. Automated Test Suite** | 16 automated Vitest unit & integration tests covering scheduling, retries, and rate limits | `npm test` |
+| **3. Test Concurrent Workers** | Atomic Redis Lua slot reservations (`reserveSenderTransmissionSlot`) serialize sends across parallel workers | `npm run test:concurrency` |
+| **4. Demonstrate Failure Recovery** | Tested worker crash with delayed jobs, Redis reconnect, and PostgreSQL outage retry backoff | `npm run test:recovery` |
+| **5. Deployment & Observability** | GitHub Actions CI (`.github/workflows/ci.yml`), structured logger (`logger.js`), deep health checks (`/health`) | `npm test` + `curl http://localhost:5000/health` |
 
 ---
 
@@ -260,7 +276,27 @@ GET /api/emails/stats
 
 ---
 
-## 🧪 Testing and Verification
+### Automated Unit & Integration Tests
+
+Run the test suite in the backend directory:
+
+```bash
+cd backend
+
+# Run all 16 Vitest unit & integration tests
+npm test
+
+# Run duplicate prevention crash simulation
+npm run test:duplicates
+
+# Run multi-worker concurrency & throttling verification
+npm run test:concurrency
+
+# Run failure recovery & resilience demonstration
+npm run test:recovery
+```
+
+### Manual Verification via UI
 
 A sample lead file is included in the root directory: [`sample-leads.csv`](sample-leads.csv).
 
@@ -271,3 +307,4 @@ A sample lead file is included in the root directory: [`sample-leads.csv`](sampl
 5. Switch to **Scheduled Emails** tab to watch jobs in BullMQ.
 6. Switch to **Sent Emails** tab and click **“View in Ethereal”** to inspect the rendered email in Ethereal SMTP's web viewer!
 7. Visit [http://localhost:5000/admin/queues](http://localhost:5000/admin/queues) to inspect the live BullMQ queues.
+8. Check deep health metrics at [http://localhost:5000/health](http://localhost:5000/health).

@@ -43,7 +43,7 @@ class EtherealService {
     return this.isInitializing;
   }
 
-  async sendEmail({ from, to, subject, text, html }) {
+  async sendEmail({ from, to, subject, text, html, messageId }) {
     if (!this.transporter) {
       await this.initialize();
     }
@@ -52,7 +52,7 @@ class EtherealService {
       throw new Error('Ethereal SMTP transporter is not initialized');
     }
 
-    const info = await this.transporter.sendMail({
+    const mailOptions = {
       from,
       to,
       subject,
@@ -63,7 +63,13 @@ class EtherealService {
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
         <small style="color: #64748b;">Sent via ReachInbox Email Scheduler Demo</small>
       </div>`,
-    });
+    };
+
+    if (messageId) {
+      mailOptions.messageId = messageId;
+    }
+
+    const info = await this.transporter.sendMail(mailOptions);
 
     const previewUrl = nodemailer.getTestMessageUrl(info);
     console.log(`📧 Email sent to ${to}. MessageId: ${info.messageId}`);
