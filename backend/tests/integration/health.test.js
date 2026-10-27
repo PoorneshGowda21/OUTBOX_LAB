@@ -4,7 +4,7 @@ import request from 'supertest';
 // Mock dependencies
 vi.mock('../../src/config/prisma.js', () => ({
   default: {
-    $queryRaw: vi.fn().mockResolvedValue([{ 1: 1 }]),
+    user: { count: vi.fn().mockResolvedValue(1) },
     $connect: vi.fn().mockResolvedValue(true),
     $disconnect: vi.fn().mockResolvedValue(true),
   },

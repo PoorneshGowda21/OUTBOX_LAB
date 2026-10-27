@@ -174,43 +174,22 @@ Access the application:
 
 ---
 
-### Option B: Local Development Setup
+### Option B: Local 1-Command Startup (Root Workspace)
 
-#### Prerequisites
-- Node.js >= 20
-- Redis server running on `localhost:6379`
-- PostgreSQL server running on `localhost:5432` with database `reachinbox`
+Ensure Redis (`6379`) and PostgreSQL (`5432`) are running locally.
 
-#### 1. Backend Setup
+From the root project folder:
 ```bash
-cd backend
+# 1. Install all dependencies across backend and frontend
+npm run install:all
 
-# Install dependencies
-npm install
+# 2. Push database schema & seed initial senders (one-time)
+cd backend && npx prisma db push && npm run seed && cd ..
 
-# Setup environment variables
-cp .env.example .env
-
-# Push Prisma schema to PostgreSQL
-npx prisma db push
-
-# Seed initial senders and admin user
-npm run seed
-
-# Start backend server
+# 3. Start BOTH Backend & Frontend together with 1 command!
 npm run dev
 ```
-
-#### 2. Frontend Setup
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start Vite dev server
-npm run dev
-```
+This runs both the Express backend and React frontend concurrently with color-coded logs in a single terminal.
 
 Visit [http://localhost:5173](http://localhost:5173).
 

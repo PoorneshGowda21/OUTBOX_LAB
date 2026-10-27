@@ -49,7 +49,7 @@ const healthHandler = async (req, res) => {
   let isHealthy = true;
 
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await prisma.user.count();
     health.checks.database = 'connected';
   } catch (err) {
     health.checks.database = `disconnected: ${err.message}`;
